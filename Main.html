@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VRMPosing+DollcreationONLINE</title>
+    <meta
+      name="description"
+      content="VRMPosing+DollcreationONLINEはブラウザ上でVRMアバターのポーズ編集や、背景透過画像の撮影やポーズさせたVRMファイルのフィギュア化がお手軽に出来るWebアプリケーションです。"
+    />
+    <script type="module" crossorigin src="/assets/index-5e29ee16.js"></script>
+    <link rel="stylesheet" href="/assets/mainindex.css">
+    <link rel="manifest" href="/manifest.webmanifest">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // myapp_tokenがなければIndex.htmlにリダイレクト
+      if (!sessionStorage.getItem("myapp_token")) {
+        window.location.href = "index.html";
+      }
+      // 何もしない場合はこのまま
+    </script>
+  </body>
+</html>
+
+
+

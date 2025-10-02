@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>VRMPorjingONLINE ログイン</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: sans-serif; background: #f8f8fb; margin: 0; }
+    .container { max-width: 480px; margin: 48px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px #0001; padding: 32px 24px; }
+    .logo { font-weight: bold; font-size: 2em; color: #ff5722; margin-bottom: 16px; }
+    .tabs { display: flex; gap: 12px; margin-bottom: 24px; }
+    .tabs button { flex: 1; padding: 12px 0; border: none; border-radius: 6px 6px 0 0; background: #eee; font-size: 1.1em; cursor: pointer; }
+    .tabs button.active { background: #fff; border-bottom: 2px solid #ff5722; color: #ff5722; }
+    .form-row { margin-bottom: 16px; }
+    label { display: block; margin-bottom: 4px; }
+    input[type="text"], input[type="password"], input[type="email"], input[type="tel"] {
+      width: 100%; padding: 8px; font-size: 1em; border-radius: 4px; border: 1px solid #ccc;
+    }
+    .actions { display: flex; gap: 8px; margin-top: 16px; }
+    button.primary { background: #ff5722; color: #fff; border: none; padding: 10px 0; border-radius: 6px; font-size: 1em; width: 100%; cursor: pointer; }
+    button.secondary { background: #eee; color: #333; border: none; padding: 8px 0; border-radius: 6px; }
+    .error { color: #d32f2f; margin-top: 10px; }
+    .message { color: #388e3c; margin-top: 10px; }
+  </style>
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div class="container">
+  <div class="logo">VRMPorjingONLINE</div>
+  <div class="tabs">
+    <button id="tab-login" class="active" onclick="showPanel('login')">ログイン</button>
+    <button id="tab-register" onclick="showPanel('register')">新規会員登録</button>
+    <button id="tab-reset" onclick="showPanel('reset')">パスワード変更</button>
+  </div>
+
+  <!-- ログイン -->
+  <!-- <form id="panel-login" onsubmit="return login(event)">一旦読み込まない-->
+    <form id="panel-login" onsubmit="return demoLogin()">
+    <div class="form-row">
+      <label for="login-email">メールアドレス</label>
+      <input type="email" id="login-email" required autocomplete="username">
+    </div>
+    <div class="form-row">
+      <label for="login-password">パスワード</label>
+      <input type="password" id="login-password" required autocomplete="current-password">
+    </div>
+    <div class="actions">
+      <button type="submit" class="primary">ログイン</button>
+    </div>
+    <div style="margin-top:8px;">
+      <a href="#" onclick="showPanel('reset'); event.preventDefault();">パスワードを忘れた方</a>
+    </div>
+    <div id="login-error" class="error"></div>
+  </form>
+
+  <!-- 新規登録 -->
+  <form id="panel-register" style="display:none;" onsubmit="return register(event)">
+    <div class="form-row">
+      <label for="register-email">メールアドレス</label>
+      <input type="email" id="register-email" required autocomplete="username">
+    </div>
+    <div class="form-row">
+      <label for="register-profile">電話番号など</label>
+      <input type="tel" id="register-profile" required autocomplete="tel">
+    </div>
+    <div class="form-row">
+      <label for="register-password">パスワード</label>
+      <input type="password" id="register-password" required autocomplete="new-password">
+    </div>
+    <div class="actions">
+      <button type="submit" class="primary">新規登録</button>
+      <button type="button" class="secondary" onclick="showPanel('login')">戻る</button>
+    </div>
+    <div id="register-error" class="error"></div>
+    <div id="register-msg" class="message"></div>
+  </form>
+
+  <!-- パスワード変更 -->
+  <form id="panel-reset" style="display:none;" onsubmit="return changePassword(event)">
+    <div class="form-row">
+      <label for="reset-email">メールアドレス</label>
+      <input type="email" id="reset-email" required autocomplete="username">
+    </div>
+    <div class="form-row">
+      <label for="reset-old-password">現在のパスワード</label>
+      <input type="password" id="reset-old-password" required autocomplete="current-password">
+    </div>
+    <div class="form-row">
+      <label for="reset-new-password">新しいパスワード</label>
+      <input type="password" id="reset-new-password" required autocomplete="new-password">
+    </div>
+    <div class="actions">
+      <button type="submit" class="primary">パスワード更新</button>
+      <button type="button" class="secondary" onclick="showPanel('login')">戻る</button>
+    </div>
+    <div style="margin-top:8px;">
+      <a href="#" onclick="sendForgotPassword(); event.preventDefault();">パスワードを忘れた方</a>
+    </div>
+    <div id="reset-error" class="error"></div>
+    <div id="reset-msg" class="message"></div>
+  </form>
+</div>
+
+<script>
+let currentPanel = "login";
+function showPanel(panel) {
+  ["login", "register", "reset"].forEach(p => {
+    document.getElementById("panel-" + p).style.display = (p === panel) ? "" : "none";
+    document.getElementById("tab-" + p).classList.toggle("active", p === panel);
+  });
+  // エラーメッセージ等リセット
+  ["login-error", "register-error", "register-msg", "reset-error", "reset-msg"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = "";
+  });
+  currentPanel = panel;
+
+  // 新規登録パネル表示時にGoogle認証を自動起動
+  if (panel === "register") {
+    handleGoogleSignUp();
+  }
+}
+
+// APIサーバーのURL
+const API_URL = "https://your-api-server.example.com/api/login";
+
+// ログインAPIへのリクエスト（true/falseが返る想定）
+async function callLoginApi(...args) {
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(args)
+    });
+    if (!res.ok) return false;
+    const result = await res.json();
+    // サーバーが { result: true } or { result: false } を返す前提
+    return !!result.result;
+  } catch (e) {
+    return false;
+  }
+}
+
+// ログイン
+async function login(event) {
+  event.preventDefault();
+  const email = document.getElementById("login-email").value.trim();
+  const password = document.getElementById("login-password").value;
+  const errEl = document.getElementById("login-error");
+  errEl.textContent = "";
+
+  const ok = await callLoginApi(email, password, "", "");
+  if (ok) {
+    sessionStorage.setItem("myapp_token", Math.floor(Math.random()*1e8).toString());
+    window.location.href = "Main.html";
+  } else {
+    sessionStorage.clear(); // false時にsessionStorageを空にする
+    errEl.textContent = "ログインに失敗しました";
+  }
+}
+
+function demoLogin() {
+  sessionStorage.setItem("myapp_token", Math.floor(100000 + Math.random() * 900000).toString());
+  window.location.href = "Main.html";
+}
+
+  
+// 新規登録
+async function register(event) {
+  event.preventDefault();
+  const errEl = document.getElementById("register-error");
+  const msgEl = document.getElementById("register-msg");
+  errEl.textContent = "";
+  msgEl.textContent = "";
+
+  // Google認証で取得した値があればそれを優先
+  let email = document.getElementById("register-email").value.trim();
+  let profile = document.getElementById("register-profile").value.trim();
+  if (window.googleProfile) {
+    if (window.googleProfile.email) email = window.googleProfile.email;
+    if (window.googleProfile.phoneNumber) profile = window.googleProfile.phoneNumber;
+  }
+
+  const password = document.getElementById("register-password").value;
+
+  const ok = await callLoginApi(email, password, profile, "登録");
+  if (ok) {
+    sessionStorage.setItem("myapp_token", Math.floor(100000 + Math.random() * 900000).toString());
+    window.location.href = "Main.html";
+  } else {
+    sessionStorage.clear(); // false時にsessionStorageを空にする
+    errEl.textContent = "アカウント作成に失敗しました";
+  }
+}
+
+// パスワード変更
+async function changePassword(event) {
+  event.preventDefault();
+  const email = document.getElementById("reset-email").value.trim();
+  const oldpass = document.getElementById("reset-old-password").value;
+  const newpass = document.getElementById("reset-new-password").value;
+  const errEl = document.getElementById("reset-error");
+  const msgEl = document.getElementById("reset-msg");
+  errEl.textContent = "";
+  msgEl.textContent = "";
+
+  const ok = await callLoginApi(email, oldpass, newpass, "変更");
+  if (ok) {
+    sessionStorage.setItem("myapp_token", Math.floor(100000 + Math.random()*900000).toString());
+    window.location.href = "Main.html";
+  } else {
+    sessionStorage.clear(); // false時にsessionStorageを空にする
+    errEl.textContent = "パスワード変更に失敗しました";
+  }
+}
+
+// パスワードを忘れた方
+async function sendForgotPassword() {
+  const email = document.getElementById("reset-email").value.trim();
+  const msgEl = document.getElementById("reset-msg");
+  const errEl = document.getElementById("reset-error");
+  errEl.textContent = "";
+  msgEl.textContent = "";
+
+  if (!email) {
+    errEl.textContent = "メールアドレスを入力してください";
+    return;
+  }
+  const ok = await callLoginApi(email, "", "", "");
+  if (ok) {
+    msgEl.textContent = "パスワードをメールで送信しました";
+  } else {
+    sessionStorage.clear(); // false時にsessionStorageを空にする
+    errEl.textContent = "パスワード送信に失敗しました";
+  }
+}
+
+// Google認証ダイアログを起動
+function handleGoogleSignUp() {
+  google.accounts.id.initialize({
+    client_id: "341073342979-5r5ls7lo6sddcl4mrh3kbvm45mk4hiks.apps.googleusercontent.com",
+    callback: handleGoogleSignIn
+  });
+  google.accounts.id.prompt();
+}
+
+// Google認証コールバック
+function handleGoogleSignIn(response) {
+  const data = parseJwt(response.credential);
+  window.googleProfile = {
+    email: data.email || "",
+    phoneNumber: data.phone_number || ""
+  };
+  document.getElementById("register-email").value = window.googleProfile.email;
+  if (window.googleProfile.phoneNumber) {
+    document.getElementById("register-profile").value = window.googleProfile.phoneNumber;
+  }
+}
+
+// JWTデコード
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = atob(base64Url.replace(/-/g, '+').replace(/_/g, '/'));
+    const jsonPayload = decodeURIComponent(
+      Array.prototype.map.call(base64, function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
+
