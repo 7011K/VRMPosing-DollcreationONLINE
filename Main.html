@@ -65,9 +65,10 @@
 
         const canvas = document.querySelector("canvas");
         const mountPoint = canvas ? canvas.parentNode : document.getElementById("root");
-
+        console.log("Three.js renderer:", threeRenderer);
         loadAndInitAddons({ threeRenderer, mountPoint });
       });
     </script>
   </body>
 </html>
+
