@@ -51,7 +51,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     // 追加済みなら何もしない
     if (ul.querySelector("[data-addon='bgcolor-tabs']")) return;
 
-    // === ここからli→divに修正 ===
+    // <div role="listitem">で追加
     const newDiv = document.createElement("div");
     newDiv.className = "MuiButtonBase-root MuiListItemButton-root MuiListItemButton-gutters";
     newDiv.setAttribute("role", "listitem");
@@ -65,18 +65,24 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     newDiv.style.padding = "0";
     newDiv.style.width = "100%";
 
-    // ヘッダー部分（Accordionのタイトル）
-    const headerDiv = document.createElement("div");
-    headerDiv.className = "MuiButtonBase-root MuiListItemButton-root MuiListItemButton-gutters";
-    headerDiv.style.display = "flex";
-    headerDiv.style.alignItems = "center";
-    headerDiv.style.cursor = "pointer";
-    headerDiv.style.userSelect = "none";
-    headerDiv.style.minHeight = "48px";
-    headerDiv.style.padding = "6px 16px";
-    headerDiv.style.fontSize = "1rem";
-    headerDiv.style.color = "#fff";
-    headerDiv.style.width = "100%";
+    // ヘッダー部分
+    const headerBtn = document.createElement("button");
+    headerBtn.type = "button";
+    headerBtn.className = "MuiButtonBase-root MuiListItemButton-root MuiListItemButton-gutters";
+    headerBtn.setAttribute("tabindex", "0");
+    headerBtn.setAttribute("role", "button");
+    headerBtn.style.width = "100%";
+    headerBtn.style.display = "flex";
+    headerBtn.style.alignItems = "center";
+    headerBtn.style.cursor = "pointer";
+    headerBtn.style.userSelect = "none";
+    headerBtn.style.minHeight = "48px";
+    headerBtn.style.padding = "6px 16px";
+    headerBtn.style.fontSize = "1rem";
+    headerBtn.style.color = "#fff";
+    headerBtn.style.background = "inherit";
+    headerBtn.style.border = "none";
+    headerBtn.style.textAlign = "left";
 
     // アイコン
     const iconDiv = document.createElement("div");
@@ -89,7 +95,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
         <circle cx="12" cy="12" r="9" fill="#888"/>
         <text x="12" y="17" text-anchor="middle" font-size="10" fill="#fff" font-family="sans-serif">色</text>
       </svg>`;
-    headerDiv.appendChild(iconDiv);
+    headerBtn.appendChild(iconDiv);
 
     // テキストラベル
     const textDiv = document.createElement("div");
@@ -98,7 +104,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     span.className = "MuiTypography-root MuiTypography-body1 MuiListItemText-primary";
     span.textContent = "背景色変更";
     textDiv.appendChild(span);
-    headerDiv.appendChild(textDiv);
+    headerBtn.appendChild(textDiv);
 
     // 展開/折りたたみアイコン
     const arrow = document.createElement("span");
@@ -108,11 +114,15 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
       </svg>
     `;
     arrow.style.marginLeft = "auto";
-    headerDiv.appendChild(arrow);
+    headerBtn.appendChild(arrow);
 
-    newDiv.appendChild(headerDiv);
+    // hover時の色もMUIに合わせて
+    headerBtn.onmouseover = () => { headerBtn.style.background = "rgba(255,255,255,0.08)"; };
+    headerBtn.onmouseout = () => { headerBtn.style.background = "inherit"; };
 
-    // 展開パネル本体
+    newDiv.appendChild(headerBtn);
+
+    // 展開パネル本体（アニメーション対応）
     const panelDiv = document.createElement("div");
     panelDiv.style.maxHeight = "0";
     panelDiv.style.opacity = "0";
@@ -297,12 +307,12 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
       arrow.firstElementChild.style.transition = "transform 225ms cubic-bezier(0.4,0,0.2,1)";
     }
     setPanelDisplay(expanded);
-    headerDiv.onclick = () => {
+    headerBtn.onclick = () => {
       expanded = !expanded;
       setPanelDisplay(expanded);
     };
 
-    // 「背景」の次に挿入（なければ末尾）
+    // 「背景」項目の次にinsert
     if (insertAfter && insertAfter.nextSibling) {
       ul.insertBefore(newDiv, insertAfter.nextSibling);
     } else {
