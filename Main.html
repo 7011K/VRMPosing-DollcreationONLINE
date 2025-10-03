@@ -20,53 +20,56 @@
       if (!sessionStorage.getItem("myapp_token")) {
         window.location.href = "index.html";
       }
-    </script>
     <script type="module">
-      // --- アドオン自動ローダ ---
-      // 「./addons/addons-list.json」から全*.jsを取得し、自動でimport
+  // --- アドオン自動ローダ ---
+  // 「./addons/addons-list.json」から全*.jsを取得し、自動でimport
 
-      async function discoverAddonJsFiles() {
-        try {
-          const resp = await fetch("./addons/addons-list.json");
-          if (!resp.ok) throw new Error("アドオン一覧の取得に失敗しました");
-          return await resp.json(); // 例: ["addons/xxx/xxx.js", ...]
-        } catch (e) {
-          console.error("アドオン一覧取得エラー", e);
-          return [];
-        }
-      }
+  async function discoverAddonJsFiles() {
+    try {
+      const resp = await fetch("./addons/addons-list.json");
+      if (!resp.ok) throw new Error("アドオン一覧の取得に失敗しました");
+      return await resp.json(); // 例: ["addons/xxx/xxx.js", ...]
+    } catch (e) {
+      console.error("アドオン一覧取得エラー", e);
+      return [];
+    }
+  }
 
-      async function loadAndInitAddons({ threeRenderer, mountPoint }) {
-        const addonFiles = await discoverAddonJsFiles();
-        for (const addonPath of addonFiles) {
-          const baseUrl = addonPath.substring(0, addonPath.lastIndexOf('/') + 1);
-          try {
-            await import(`./${addonPath}`);
-            if (window.MyAppAddons) {
-              window.MyAppAddons.forEach(fn => {
-                try {
-                  fn({ threeRenderer, mountPoint, addonBaseUrl: baseUrl });
-                } catch (e) {
-                  console.error(`[ADDON ERROR]`, addonPath, e);
-                }
-              });
+  async function loadAndInitAddons({ threeRenderer, mountPoint }) {
+    const addonFiles = await discoverAddonJsFiles();
+    for (const addonPath of addonFiles) {
+      const baseUrl = addonPath.substring(0, addonPath.lastIndexOf('/') + 1);
+      try {
+        await import(`./${addonPath}`);
+        if (window.MyAppAddons) {
+          window.MyAppAddons.forEach(fn => {
+            try {
+              fn({ threeRenderer, mountPoint, addonBaseUrl: baseUrl });
+            } catch (e) {
+              console.error(`[ADDON ERROR]`, addonPath, e);
             }
-          } catch (e) {
-            console.error(`Failed to load addon: ${addonPath}`, e);
-          }
+          });
         }
+      } catch (e) {
+        console.error(`Failed to load addon: ${addonPath}`, e);
       }
+    }
+  }
 
-      window.addEventListener("DOMContentLoaded", () => {
-        // Three.js renderer取得方法は本体実装に合わせてください
-        const threeRenderer =
-          (window.UQ && window.UQ._viewer && window.UQ._viewer.renderer)
-          || window.myThreeRendererInstance
-          || null;
-        const canvas = document.querySelector("canvas");
-        const mountPoint = canvas ? canvas.parentNode : document.getElementById("root");
-        loadAndInitAddons({ threeRenderer, mountPoint });
-      });
-    </script>
+  window.addEventListener("DOMContentLoaded", () => {
+    // ★ Three.js rendererの取得方法をバンドルの設計に合わせて統一
+    const threeRenderer =
+      (window.UQ && window.UQ._viewer && window.UQ._viewer.renderer)
+      || null;
+
+    // mountPointはcanvasの親 or #root
+    const canvas = document.querySelector("canvas");
+    const mountPoint = canvas ? canvas.parentNode : document.getElementById("root");
+
+    loadAndInitAddons({ threeRenderer, mountPoint });
+  });
+</script>
+
   </body>
 </html>
+
