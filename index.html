@@ -161,6 +161,7 @@ async function login(event) {
 }
 
 function demoLogin(event) {
+  event.preventDefault();
   sessionStorage.setItem("myapp_token", Math.floor(100000 + Math.random() * 900000).toString());
   window.location.href = "Main.html";
 }
@@ -276,5 +277,6 @@ function parseJwt(token) {
 </script>
 </body>
 </html>
+
 
 
