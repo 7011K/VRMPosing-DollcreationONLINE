@@ -1,13 +1,51 @@
+
 {
-  "name": "VRMPosing+DollcreationONLINE",
-  "short_name": "VRMポーズ+フィギュア",
-  "start_url": ".",
+  "name": "VRMポーズandフィギュア",
+  "short_name": "VRMポーズandフィギュア",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#222233",
-  "theme_color": "#222233",
-  "description": "VRMのポーズ編集+フィギュア制作用データ出力Webアプリ",
+  "background_color": "#FF5722",
+  "lang": "en",
+  "scope": "/",
+  "theme_color": "#FF5722",
+  "description": "VRMポーズandフィギュアはブラウザ上でVRMアバターのポーズ編集や、背景透過画像の撮影、フィギュア制作依頼がお手軽に出来るWebアプリケーションです。",
   "icons": [
-    { "src": "/favicon.svg", "sizes": "192x192", "type": "image/svg+xml" }
-    // ...他サイズのアイコン
+    {
+      "src": "appIcons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "appIcons/icon-256x256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "appIcons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png"
+    },
+    {
+      "src": "appIcons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": ".",
+      "accept": {
+        "application/octet-stream": [".vrm"]
+      },
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
+      "launch_type": "multiple-clients"
+    }
   ]
 }
+
