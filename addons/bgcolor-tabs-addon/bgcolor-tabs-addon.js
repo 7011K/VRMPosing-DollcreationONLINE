@@ -8,7 +8,11 @@ window.MyAppAddons.push(function () {
 
   function findUI表示Tab() {
     const tabs = Array.from(document.querySelectorAll('[role="listitem"]'));
-    return tabs.find(el => el.textContent.includes("UI表示"));
+    const match = tabs.find(el => el.textContent.includes("UI表示"));
+    if (!match) {
+      console.error("[アドオンエラー] 「UI表示」タブが見つかりません。背景色変更タブを追加できませんでした。");
+    }
+    return match;
   }
 
   function createClonedTab(referenceTab) {
