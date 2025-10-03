@@ -10,17 +10,26 @@ window.MyAppAddons.push(function () {
     const tabs = Array.from(document.querySelectorAll('[role="listitem"]'));
     const match = tabs.find(el => el.textContent.includes("UI表示"));
     if (!match) {
-      console.error("[アドオンエラー] 「UI表示」タブが見つかりません。背景色変更タブを追加できませんでした。");
+      console.error("[アドオンエラー] 「UI表示」タブが見つかりません。");
     }
     return match;
   }
 
   function createClonedTab(referenceTab) {
+    if (!referenceTab) {
+      console.error("[アドオンエラー] 複製元が null です。");
+      return null;
+    }
+
     const cloned = referenceTab.cloneNode(true);
     cloned.id = ADDON_ID;
 
     const labelSpan = cloned.querySelector('.MuiListItemText-primary');
-    if (labelSpan) labelSpan.textContent = TAB_LABEL;
+    if (labelSpan) {
+      labelSpan.textContent = TAB_LABEL;
+    } else {
+      console.warn("[アドオン警告] ラベル要素が見つかりません。");
+    }
 
     const expandIcon = cloned.querySelector('svg[data-testid]');
     if (expandIcon) {
@@ -31,8 +40,10 @@ window.MyAppAddons.push(function () {
       const collapse = document.getElementById(COLLAPSE_ID);
       if (collapse) {
         collapse.remove();
+        console.log("[DEBUG] Collapse領域を削除しました");
       } else {
         insertCollapseContent(cloned);
+        console.log("[DEBUG] Collapse領域を追加しました");
       }
     });
 
@@ -62,14 +73,33 @@ window.MyAppAddons.push(function () {
   }
 
   function insertAddonTab() {
-    if (document.getElementById(ADDON_ID)) return;
+    if (document.getElementById(ADDON_ID)) {
+      console.log("[DEBUG] 背景色変更タブは既に存在しています");
+      return;
+    }
 
     const referenceTab = findUI表示Tab();
     if (!referenceTab) return;
 
     const clonedTab = createClonedTab(referenceTab);
-    referenceTab.parentNode.insertBefore(clonedTab, referenceTab.nextSibling);
-    adjustAddonPosition();
+    if (!clonedTab) {
+      console.error("[アドオンエラー] タブの複製に失敗しました。");
+      return;
+    }
+
+    const parent = referenceTab.parentNode;
+    if (!parent) {
+      console.error("[アドオンエラー] 複製元の親要素が見つかりません。");
+      return;
+    }
+
+    try {
+      parent.insertBefore(clonedTab, referenceTab.nextSibling);
+      console.log("[DEBUG] 背景色変更タブを挿入しました");
+      adjustAddonPosition();
+    } catch (e) {
+      console.error("[アドオンエラー] insertBefore に失敗:", e);
+    }
   }
 
   function removeAddonTab() {
@@ -90,10 +120,14 @@ window.MyAppAddons.push(function () {
 
   function isSettingsPanelVisible() {
     const settingsButton = document.querySelector(SETTINGS_BUTTON_SELECTOR);
-    return settingsButton?.getAttribute("aria-expanded") === "true";
+    const expanded = settingsButton?.getAttribute("aria-expanded") === "true";
+    console.log("[DEBUG] 環境設定ボタンの展開状態:", expanded);
+    return expanded;
   }
 
   const observer = new MutationObserver(() => {
+    console.log("[DEBUG] DOM変化を検知");
+
     if (isSettingsPanelVisible()) {
       insertAddonTab();
     } else {
@@ -104,4 +138,5 @@ window.MyAppAddons.push(function () {
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
+  console.log("[DEBUG] MutationObserverを開始");
 });
