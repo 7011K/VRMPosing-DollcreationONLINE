@@ -1,0 +1,8 @@
+{
+  "presets": [
+    { "name": "デフォルト", "color": "#303030" },
+    { "name": "白", "color": "#ffffff" },
+    { "name": "黒", "color": "#000000" },
+    { "name": "青", "color": "#3e5be4" }
+  ]
+}
