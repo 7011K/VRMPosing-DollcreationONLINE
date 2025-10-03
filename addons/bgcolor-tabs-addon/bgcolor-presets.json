@@ -1,8 +1,21 @@
 {
-  "presets": [
-    { "name": "デフォルト", "color": "#303030" },
-    { "name": "白", "color": "#ffffff" },
-    { "name": "黒", "color": "#000000" },
-    { "name": "青", "color": "#3e5be4" }
+  "groups": [
+    {
+      "name": "標準色",
+      "colors": [
+        { "name": "デフォルト", "color": "#303030" },
+        { "name": "白", "color": "#ffffff" },
+        { "name": "黒", "color": "#000000" },
+        { "name": "青", "color": "#3e5be4" }
+      ]
+    },
+    {
+      "name": "パステル",
+      "colors": [
+        { "name": "ピンク", "color": "#ffb6c1" },
+        { "name": "ミント", "color": "#aee9d1" },
+        { "name": "イエロー", "color": "#fff176" }
+      ]
+    }
   ]
 }
