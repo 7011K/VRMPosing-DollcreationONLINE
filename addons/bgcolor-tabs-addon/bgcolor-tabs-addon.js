@@ -17,36 +17,49 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
   }
 
   // 既存UI削除（重複防止）
-  let existing = document.querySelector("[data-addon='bgcolor-tabs']");
-  if (existing) existing.remove();
+  function removeExisting() {
+    let existing = document.querySelector("[data-addon='bgcolor-tabs']");
+    if (existing) existing.remove();
+  }
+  removeExisting();
 
-  // 環境設定ulを毎回探す
-  function findSettingsUL() {
-    const allUl = document.querySelectorAll("ul.MuiList-root");
-    for (const ul of allUl) {
-      const labels = Array.from(ul.querySelectorAll("span")).map(s=>s.textContent);
-      if (labels.some(l=>l && (l.includes("背景") || l.includes("UI表示")))) {
-        return ul;
+  // 「背景」のAccordionパネル(展開部分)のulを探す
+  function findBackgroundPanelUL() {
+    // 「背景」ボタンを探す
+    const allItems = document.querySelectorAll("[role='listitem']");
+    let backgroundBtn = null;
+    for (const item of allItems) {
+      const span = item.querySelector("span");
+      if (span && span.textContent.trim() === "背景") {
+        backgroundBtn = item;
+        break;
       }
+    }
+    if (!backgroundBtn) return null;
+    // 「背景」ボタンの次以降の兄弟(or親)に展開パネルが入る
+    // Accordion展開部分は通常: div.MuiCollapse-root > div.MuiCollapse-wrapper > div.MuiCollapse-wrapperInner > ul
+    let panel = backgroundBtn.nextElementSibling;
+    // MUIのAccordion構造に応じて探索
+    while (panel) {
+      if (
+        panel.classList.contains("MuiCollapse-root") ||
+        panel.classList.contains("MuiCollapse-vertical")
+      ) {
+        // 展開されている場合は display: block or height > 0
+        // 展開部分のulを探す
+        const ul = panel.querySelector("ul.MuiList-root");
+        if (ul) return ul;
+      }
+      panel = panel.nextElementSibling;
     }
     return null;
   }
 
   // UIを追加する
   function addAddonUI() {
-    const ul = findSettingsUL();
+    removeExisting();
+    const ul = findBackgroundPanelUL();
     if (!ul) return;
-
-    // 「背景」リスト項目を特定
-    const lis = Array.from(ul.children);
-    let insertAfter = null;
-    for (const li of lis) {
-      const span = li.querySelector("span");
-      if (span && span.textContent.trim() === "背景") {
-        insertAfter = li;
-        break;
-      }
-    }
 
     // 追加済みなら何もしない
     if (ul.querySelector("[data-addon='bgcolor-tabs']")) return;
@@ -116,7 +129,6 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     arrow.style.marginLeft = "auto";
     headerBtn.appendChild(arrow);
 
-    // hover時の色もMUIに合わせて
     headerBtn.onmouseover = () => { headerBtn.style.background = "rgba(255,255,255,0.08)"; };
     headerBtn.onmouseout = () => { headerBtn.style.background = "inherit"; };
 
@@ -312,17 +324,13 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
       setPanelDisplay(expanded);
     };
 
-    // 「背景」項目の次にinsert
-    if (insertAfter && insertAfter.nextSibling) {
-      ul.insertBefore(newDiv, insertAfter.nextSibling);
-    } else {
-      ul.appendChild(newDiv);
-    }
+    // パネルをAccordion展開部分のul内にappend
+    ul.appendChild(newDiv);
     newDiv.appendChild(panelDiv);
   }
 
-  // 環境設定タブを監視して、表示のたびにUIを再挿入
-  function observeSettingsTab() {
+  // 「背景」Accordionを監視して、開いたときのみUIを再挿入
+  function observeBackgroundAccordion() {
     const sidebar = document.querySelector("#root") || document.body;
     let observer;
     observer = new MutationObserver(() => {
@@ -332,8 +340,8 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     setTimeout(addAddonUI, 0);
   }
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", observeSettingsTab);
+    document.addEventListener("DOMContentLoaded", observeBackgroundAccordion);
   } else {
-    observeSettingsTab();
+    observeBackgroundAccordion();
   }
 });
