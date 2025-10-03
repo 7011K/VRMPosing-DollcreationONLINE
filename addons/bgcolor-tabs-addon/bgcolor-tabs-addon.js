@@ -61,14 +61,20 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     newLi.style.flexDirection = "column";
     newLi.style.alignItems = "stretch";
     newLi.style.paddingBottom = "0";
+    newLi.style.position = "relative";
+    newLi.style.background = "inherit"; // 透明
 
     // ヘッダー部分（Accordionのタイトル）
     const headerDiv = document.createElement("div");
+    headerDiv.className = "MuiButtonBase-root MuiListItemButton-root MuiListItemButton-gutters";
     headerDiv.style.display = "flex";
     headerDiv.style.alignItems = "center";
     headerDiv.style.cursor = "pointer";
     headerDiv.style.userSelect = "none";
-    headerDiv.style.padding = "8px 0 8px 0";
+    headerDiv.style.minHeight = "48px";
+    headerDiv.style.padding = "6px 16px"; // MUIデフォルト値
+    headerDiv.style.fontSize = "1rem";
+    headerDiv.style.color = "#fff";
 
     // アイコン
     const iconDiv = document.createElement("div");
@@ -108,17 +114,20 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     const panelDiv = document.createElement("div");
     panelDiv.style.display = "none";
     panelDiv.style.flexDirection = "column";
-    panelDiv.style.background = "rgba(0,0,0,0.05)";
-    // panelDiv.style.borderRadius = "8px";
-    panelDiv.style.margin = "0 0 8px 0";
-    panelDiv.style.padding = "0";
+    panelDiv.style.background = "inherit";
+    panelDiv.style.margin = "0";
+    panelDiv.style.padding = "0 0 8px 0";
+    panelDiv.style.position = "relative";
+    // 必要ならz-indexで被り防止
+    panelDiv.style.zIndex = 1;
 
-    // タブ
+    // タブバー
     const tabBar = document.createElement("div");
     tabBar.style.display = "flex";
     tabBar.style.gap = "8px";
     tabBar.style.margin = "8px 0 0 32px";
     tabBar.style.overflowX = "auto";
+    tabBar.className = "MuiTabs-root";
 
     // スクロールリスト
     const scrollDiv = document.createElement("div");
@@ -126,6 +135,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     scrollDiv.style.overflowY = "auto";
     scrollDiv.style.margin = "4px 0 0 32px";
     scrollDiv.style.paddingRight = "8px";
+    scrollDiv.style.background = "inherit";
 
     // 選択状態管理
     let selectedGroup = 0;
@@ -140,18 +150,26 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     groups.forEach((group, idx) => {
       const tabBtn = document.createElement("button");
       tabBtn.innerText = group.name;
+      tabBtn.className = "MuiButtonBase-root MuiTab-root MuiTab-textColorPrimary";
       tabBtn.style.background = idx === selectedGroup ? "#222" : "#444";
       tabBtn.style.color = "#fff";
       tabBtn.style.border = "none";
-      tabBtn.style.borderRadius = "4px 4px 0 0";
-      tabBtn.style.padding = "4px 12px";
-      tabBtn.style.cursor = "pointer";
+      tabBtn.style.borderBottom = idx === selectedGroup ? "2px solid #1976d2" : "2px solid transparent";
+      tabBtn.style.outline = "none";
+      tabBtn.style.padding = "8px 24px";
+      tabBtn.style.minWidth = "72px";
+      tabBtn.style.fontSize = "0.875rem";
       tabBtn.style.fontWeight = idx === selectedGroup ? "bold" : "normal";
+      tabBtn.style.lineHeight = "1.75";
+      tabBtn.style.letterSpacing = "0.02857em";
+      tabBtn.style.textTransform = "none";
+      tabBtn.style.cursor = "pointer";
       tabBtn.onclick = () => {
         selectedGroup = idx;
         renderColorList();
         Array.from(tabBar.children).forEach((btn, i) => {
           btn.style.background = i === selectedGroup ? "#222" : "#444";
+          btn.style.borderBottom = i === selectedGroup ? "2px solid #1976d2" : "2px solid transparent";
           btn.style.fontWeight = i === selectedGroup ? "bold" : "normal";
         });
       };
@@ -177,7 +195,6 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
         checkbox.checked = (selectedColorIdx[selectedGroup] === idx);
         checkbox.style.accentColor = preset.color;
         checkbox.onclick = () => {
-          // threeRendererがなければエラーを出さず無効化
           if (!threeRenderer || !threeRenderer.setClearColor) return;
           Array.from(scrollDiv.querySelectorAll("input[type='checkbox'].preset")).forEach(cb => cb.checked = false);
           checkbox.checked = true;
@@ -188,7 +205,6 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
           if (customCb) customCb.checked = false;
         };
         checkbox.classList.add("preset");
-        // threeRendererがなければ無効化
         if (!threeRenderer || !threeRenderer.setClearColor) checkbox.disabled = true;
 
         // 色プレビュー
@@ -203,8 +219,9 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
         // 色名
         const nameSpan = document.createElement("span");
         nameSpan.innerText = preset.name;
+        nameSpan.className = "MuiTypography-root MuiTypography-body2";
         nameSpan.style.color = "#fff";
-        nameSpan.style.fontSize = "13px";
+        nameSpan.style.fontSize = "0.875rem";
 
         label.appendChild(checkbox);
         label.appendChild(colorBox);
@@ -251,8 +268,9 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
 
       const customLabel = document.createElement("span");
       customLabel.innerText = "カスタム色";
+      customLabel.className = "MuiTypography-root MuiTypography-body2";
       customLabel.style.color = "#fff";
-      customLabel.style.fontSize = "13px";
+      customLabel.style.fontSize = "0.875rem";
 
       pickerLabel.appendChild(pickerCheckbox);
       pickerLabel.appendChild(inputColor);
