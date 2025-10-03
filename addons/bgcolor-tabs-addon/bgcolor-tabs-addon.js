@@ -22,7 +22,6 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
 
   // 環境設定ulを毎回探す
   function findSettingsUL() {
-    // 「背景」や「UI表示」などのリストがあるul
     const allUl = document.querySelectorAll("ul.MuiList-root");
     for (const ul of allUl) {
       const labels = Array.from(ul.querySelectorAll("span")).map(s=>s.textContent);
@@ -52,16 +51,19 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     // 追加済みなら何もしない
     if (ul.querySelector("[data-addon='bgcolor-tabs']")) return;
 
-    // <li>を新しく作成
-    const newLi = document.createElement("li");
-    newLi.className = "MuiListItem-root MuiListItem-gutters MuiListItem-padding";
-    newLi.setAttribute("role", "listitem");
-    newLi.setAttribute("data-addon", "bgcolor-tabs");
-    newLi.style.flexDirection = "column";
-    newLi.style.alignItems = "stretch";
-    newLi.style.paddingBottom = "0";
-    newLi.style.position = "relative";
-    newLi.style.background = "inherit";
+    // === ここからli→divに修正 ===
+    const newDiv = document.createElement("div");
+    newDiv.className = "MuiButtonBase-root MuiListItemButton-root MuiListItemButton-gutters";
+    newDiv.setAttribute("role", "listitem");
+    newDiv.setAttribute("data-addon", "bgcolor-tabs");
+    newDiv.style.flexDirection = "column";
+    newDiv.style.alignItems = "stretch";
+    newDiv.style.paddingBottom = "0";
+    newDiv.style.position = "relative";
+    newDiv.style.background = "inherit";
+    newDiv.style.margin = "0";
+    newDiv.style.padding = "0";
+    newDiv.style.width = "100%";
 
     // ヘッダー部分（Accordionのタイトル）
     const headerDiv = document.createElement("div");
@@ -74,6 +76,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     headerDiv.style.padding = "6px 16px";
     headerDiv.style.fontSize = "1rem";
     headerDiv.style.color = "#fff";
+    headerDiv.style.width = "100%";
 
     // アイコン
     const iconDiv = document.createElement("div");
@@ -107,9 +110,9 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     arrow.style.marginLeft = "auto";
     headerDiv.appendChild(arrow);
 
-    newLi.appendChild(headerDiv);
+    newDiv.appendChild(headerDiv);
 
-    // 展開パネル本体（アニメーション対応）
+    // 展開パネル本体
     const panelDiv = document.createElement("div");
     panelDiv.style.maxHeight = "0";
     panelDiv.style.opacity = "0";
@@ -121,6 +124,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     panelDiv.style.padding = "0 0 8px 0";
     panelDiv.style.position = "relative";
     panelDiv.style.zIndex = 1;
+    panelDiv.style.width = "100%";
 
     // タブバー
     const tabBar = document.createElement("div");
@@ -143,7 +147,6 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     let selectedColorIdx = {};
     groups.forEach((g, i) => selectedColorIdx[i] = 0);
 
-    // カラーピッカーの現在値（グループごとに記憶）
     let pickerColor = {};
     groups.forEach((g,i)=> pickerColor[i] = "#cccccc");
 
@@ -178,19 +181,16 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     });
     panelDiv.appendChild(tabBar);
 
-    // 色リストUI & カラーピッカー
     function renderColorList() {
       scrollDiv.innerHTML = '';
       const group = groups[selectedGroup];
       group.colors.forEach((preset, idx) => {
-        // チェックボックスラベル
         const label = document.createElement("label");
         label.style.display = "flex";
         label.style.alignItems = "center";
         label.style.gap = "8px";
         label.style.margin = "4px 0";
 
-        // チェックボックス
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.checked = (selectedColorIdx[selectedGroup] === idx);
@@ -201,14 +201,12 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
           checkbox.checked = true;
           selectedColorIdx[selectedGroup] = idx;
           threeRenderer.setClearColor(preset.color);
-          // カラーピッカーのチェックも外す
           const customCb = scrollDiv.querySelector("input[type='checkbox'].custom");
           if (customCb) customCb.checked = false;
         };
         checkbox.classList.add("preset");
         if (!threeRenderer || !threeRenderer.setClearColor) checkbox.disabled = true;
 
-        // 色プレビュー
         const colorBox = document.createElement("span");
         colorBox.style.display = "inline-block";
         colorBox.style.width = "20px";
@@ -217,7 +215,6 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
         colorBox.style.background = preset.color;
         colorBox.style.border = "1px solid #888";
 
-        // 色名
         const nameSpan = document.createElement("span");
         nameSpan.innerText = preset.name;
         nameSpan.className = "MuiTypography-root MuiTypography-body2";
@@ -231,7 +228,6 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
         scrollDiv.appendChild(label);
       });
 
-      // カラーピッカー行
       const pickerLabel = document.createElement("label");
       pickerLabel.style.display = "flex";
       pickerLabel.style.alignItems = "center";
@@ -282,12 +278,10 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     renderColorList();
     panelDiv.appendChild(scrollDiv);
 
-    // Accordion展開制御（MUI標準：225ms cubic-bezier(.4,0,.2,1)）
     let expanded = false;
     function setPanelDisplay(exp) {
       if (exp) {
         panelDiv.style.display = "flex";
-        // 動画のようなアニメを再現
         requestAnimationFrame(() => {
           panelDiv.style.maxHeight = "350px";
           panelDiv.style.opacity = "1";
@@ -295,17 +289,14 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
       } else {
         panelDiv.style.maxHeight = "0";
         panelDiv.style.opacity = "0";
-        // アニメ後にdisplay: none
         setTimeout(() => {
           if (panelDiv.style.maxHeight === "0px" || panelDiv.style.maxHeight === "0") panelDiv.style.display = "none";
         }, 225);
       }
-      // 回転アイコン
       arrow.firstElementChild.style.transform = exp ? "rotate(180deg)" : "";
       arrow.firstElementChild.style.transition = "transform 225ms cubic-bezier(0.4,0,0.2,1)";
     }
     setPanelDisplay(expanded);
-
     headerDiv.onclick = () => {
       expanded = !expanded;
       setPanelDisplay(expanded);
@@ -313,11 +304,11 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
 
     // 「背景」の次に挿入（なければ末尾）
     if (insertAfter && insertAfter.nextSibling) {
-      ul.insertBefore(newLi, insertAfter.nextSibling);
+      ul.insertBefore(newDiv, insertAfter.nextSibling);
     } else {
-      ul.appendChild(newLi);
+      ul.appendChild(newDiv);
     }
-    newLi.appendChild(panelDiv);
+    newDiv.appendChild(panelDiv);
   }
 
   // 環境設定タブを監視して、表示のたびにUIを再挿入
