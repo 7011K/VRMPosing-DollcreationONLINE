@@ -1,0 +1,13 @@
+{
+  "name": "VRMPosing+DollcreationONLINE",
+  "short_name": "VRMポーズ+フィギュア",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#222233",
+  "theme_color": "#222233",
+  "description": "VRMのポーズ編集+フィギュア制作用データ出力Webアプリ",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "192x192", "type": "image/svg+xml" }
+    // ...他サイズのアイコン
+  ]
+}
