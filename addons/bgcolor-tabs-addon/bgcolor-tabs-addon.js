@@ -25,7 +25,6 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     // 「背景」や「UI表示」などのリストがあるul
     const allUl = document.querySelectorAll("ul.MuiList-root");
     for (const ul of allUl) {
-      // 「背景」や「UI表示」などの項目がul内にあれば対象
       const labels = Array.from(ul.querySelectorAll("span")).map(s=>s.textContent);
       if (labels.some(l=>l && (l.includes("背景") || l.includes("UI表示")))) {
         return ul;
@@ -62,7 +61,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     newLi.style.alignItems = "stretch";
     newLi.style.paddingBottom = "0";
     newLi.style.position = "relative";
-    newLi.style.background = "inherit"; // 透明
+    newLi.style.background = "inherit";
 
     // ヘッダー部分（Accordionのタイトル）
     const headerDiv = document.createElement("div");
@@ -72,7 +71,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     headerDiv.style.cursor = "pointer";
     headerDiv.style.userSelect = "none";
     headerDiv.style.minHeight = "48px";
-    headerDiv.style.padding = "6px 16px"; // MUIデフォルト値
+    headerDiv.style.padding = "6px 16px";
     headerDiv.style.fontSize = "1rem";
     headerDiv.style.color = "#fff";
 
@@ -101,7 +100,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     // 展開/折りたたみアイコン
     const arrow = document.createElement("span");
     arrow.innerHTML = `
-      <svg class="MuiSvgIcon-root" style="width:24px;height:24px;transition:transform 0.2s;" viewBox="0 0 24 24">
+      <svg class="MuiSvgIcon-root" style="width:24px;height:24px;transition:transform 0.225s cubic-bezier(0.4,0,0.2,1);" viewBox="0 0 24 24">
         <path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z" fill="#fff"/>
       </svg>
     `;
@@ -110,15 +109,17 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
 
     newLi.appendChild(headerDiv);
 
-    // 展開パネル本体
+    // 展開パネル本体（アニメーション対応）
     const panelDiv = document.createElement("div");
-    panelDiv.style.display = "none";
+    panelDiv.style.maxHeight = "0";
+    panelDiv.style.opacity = "0";
+    panelDiv.style.overflow = "hidden";
+    panelDiv.style.transition = "max-height 225ms cubic-bezier(0.4,0,0.2,1), opacity 225ms cubic-bezier(0.4,0,0.2,1)";
     panelDiv.style.flexDirection = "column";
     panelDiv.style.background = "inherit";
     panelDiv.style.margin = "0";
     panelDiv.style.padding = "0 0 8px 0";
     panelDiv.style.position = "relative";
-    // 必要ならz-indexで被り防止
     panelDiv.style.zIndex = 1;
 
     // タブバー
@@ -281,11 +282,27 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     renderColorList();
     panelDiv.appendChild(scrollDiv);
 
-    // Accordion展開制御
+    // Accordion展開制御（MUI標準：225ms cubic-bezier(.4,0,.2,1)）
     let expanded = false;
     function setPanelDisplay(exp) {
-      panelDiv.style.display = exp ? "flex" : "none";
+      if (exp) {
+        panelDiv.style.display = "flex";
+        // 動画のようなアニメを再現
+        requestAnimationFrame(() => {
+          panelDiv.style.maxHeight = "350px";
+          panelDiv.style.opacity = "1";
+        });
+      } else {
+        panelDiv.style.maxHeight = "0";
+        panelDiv.style.opacity = "0";
+        // アニメ後にdisplay: none
+        setTimeout(() => {
+          if (panelDiv.style.maxHeight === "0px" || panelDiv.style.maxHeight === "0") panelDiv.style.display = "none";
+        }, 225);
+      }
+      // 回転アイコン
       arrow.firstElementChild.style.transform = exp ? "rotate(180deg)" : "";
+      arrow.firstElementChild.style.transition = "transform 225ms cubic-bezier(0.4,0,0.2,1)";
     }
     setPanelDisplay(expanded);
 
