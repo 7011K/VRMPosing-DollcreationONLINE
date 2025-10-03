@@ -17,13 +17,13 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
   }
 
   // 既存UI削除（重複防止）
-  function removeExisting() {
-    let existing = document.querySelector("[data-addon='bgcolor-tabs']");
+  function removeExisting(ul) {
+    if (!ul) return;
+    let existing = ul.querySelector("[data-addon='bgcolor-tabs']");
     if (existing) existing.remove();
   }
-  removeExisting();
 
-  // 「背景」のAccordionパネル(展開部分)のulを探す
+  // 「背景」Accordionパネルのulを探す
   function findBackgroundPanelUL() {
     // 「背景」ボタンを探す
     const allItems = document.querySelectorAll("[role='listitem']");
@@ -36,17 +36,13 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
       }
     }
     if (!backgroundBtn) return null;
-    // 「背景」ボタンの次以降の兄弟(or親)に展開パネルが入る
     // Accordion展開部分は通常: div.MuiCollapse-root > div.MuiCollapse-wrapper > div.MuiCollapse-wrapperInner > ul
     let panel = backgroundBtn.nextElementSibling;
-    // MUIのAccordion構造に応じて探索
     while (panel) {
       if (
         panel.classList.contains("MuiCollapse-root") ||
         panel.classList.contains("MuiCollapse-vertical")
       ) {
-        // 展開されている場合は display: block or height > 0
-        // 展開部分のulを探す
         const ul = panel.querySelector("ul.MuiList-root");
         if (ul) return ul;
       }
@@ -57,9 +53,9 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
 
   // UIを追加する
   function addAddonUI() {
-    removeExisting();
     const ul = findBackgroundPanelUL();
     if (!ul) return;
+    removeExisting(ul);
 
     // 追加済みなら何もしない
     if (ul.querySelector("[data-addon='bgcolor-tabs']")) return;
@@ -134,7 +130,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
 
     newDiv.appendChild(headerBtn);
 
-    // 展開パネル本体（アニメーション対応）
+    // 展開パネル本体
     const panelDiv = document.createElement("div");
     panelDiv.style.maxHeight = "0";
     panelDiv.style.opacity = "0";
@@ -172,7 +168,6 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     let pickerColor = {};
     groups.forEach((g,i)=> pickerColor[i] = "#cccccc");
 
-    // タブボタン生成
     groups.forEach((group, idx) => {
       const tabBtn = document.createElement("button");
       tabBtn.innerText = group.name;
@@ -329,7 +324,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     newDiv.appendChild(panelDiv);
   }
 
-  // 「背景」Accordionを監視して、開いたときのみUIを再挿入
+  // Accordion（背景）を監視して、開いたら毎回UIを再挿入
   function observeBackgroundAccordion() {
     const sidebar = document.querySelector("#root") || document.body;
     let observer;
