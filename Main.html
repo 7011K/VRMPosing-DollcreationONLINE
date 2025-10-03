@@ -20,10 +20,61 @@
       if (!sessionStorage.getItem("myapp_token")) {
         window.location.href = "index.html";
       }
-      // 何もしない場合はこのまま
+    </script>
+    <script type="module">
+      // --- アドオン自動ローダ ---
+      // 1. addons/以下の全サブディレクトリの*.jsを検出
+      // 2. import()してbaseUrlを渡し、MyAppAddonsを実行
+
+      async function discoverAddonJsFiles() {
+        // サーバーでJSONリストを返すAPIがベストですが、静的な場合は手動で列挙
+        // 例: サーバーで /addons/addons-list.json を返すなど
+        // ここでは静的例
+        return [
+          "addons/bgcolor-presets/bgcolor-tabs-addon.js",
+          // 他のアドオン: "addons/my-custom-addon/my-custom-addon.js"
+        ];
+      }
+
+      async function loadAndInitAddons({ threeRenderer, mountPoint }) {
+        const addonFiles = await discoverAddonJsFiles();
+        for (const addonPath of addonFiles) {
+          // baseUrlはサブディレクトリまで
+          const baseUrl = addonPath.substring(0, addonPath.lastIndexOf('/') + 1);
+          try {
+            // ESMでimport
+            await import(`./${addonPath}`);
+            // 登録されたアドオン実行
+            if (window.MyAppAddons) {
+              window.MyAppAddons.forEach(fn => {
+                try {
+                  fn({ threeRenderer, mountPoint, addonBaseUrl: baseUrl });
+                } catch (e) {
+                  console.error(`[ADDON ERROR]`, addonPath, e);
+                }
+              });
+            }
+          } catch (e) {
+            console.error(`Failed to load addon: ${addonPath}`, e);
+          }
+        }
+      }
+
+      // Three.js renderer, mountPointの取得方法はアプリ実装に合わせて
+      window.addEventListener("DOMContentLoaded", () => {
+        // threeRendererの取得（例：window.myThreeRendererInstance など）
+        const threeRenderer = window.myThreeRendererInstance || null;
+        // canvas直下の親（例：canvas.parentNode など）
+        const canvas = document.querySelector("canvas");
+        const mountPoint = canvas ? canvas.parentNode : document.getElementById("root");
+        // ローダ起動
+        loadAndInitAddons({ threeRenderer, mountPoint });
+      });
     </script>
   </body>
 </html>
+
+
 
 
 
