@@ -1,3 +1,4 @@
+
 window.MyAppAddons = window.MyAppAddons || [];
 window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
   // プリセット色JSON取得
@@ -19,37 +20,83 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
   // 既存UI削除（重複防止）
   function removeExisting() {
     let existing = document.querySelector("[data-addon='bgcolor-tabs']");
-    if (existing) {
-      if (existing.nextElementSibling && existing.nextElementSibling.hasAttribute("data-addon-panel")) {
-        existing.nextElementSibling.remove();
+    if (existing) existing.remove();
+  }
+  removeExisting();
+
+  // 「背景」のAccordionパネル(展開部分)のulを探す
+  function findBackgroundPanelUL() {
+    // 「背景」ボタンを探す
+    const allItems = document.querySelectorAll("[role='listitem']");
+    let backgroundBtn = null;
+    for (const item of allItems) {
+      const span = item.querySelector("span");
+      if (span && span.textContent.trim() === "背景") {
+        backgroundBtn = item;
+        break;
       }
-      existing.remove();
     }
+    if (!backgroundBtn) return null;
+    // 「背景」ボタンの次以降の兄弟(or親)に展開パネルが入る
+    // Accordion展開部分は通常: div.MuiCollapse-root > div.MuiCollapse-wrapper > div.MuiCollapse-wrapperInner > ul
+    let panel = backgroundBtn.nextElementSibling;
+    // MUIのAccordion構造に応じて探索
+    while (panel) {
+      if (
+        panel.classList.contains("MuiCollapse-root") ||
+        panel.classList.contains("MuiCollapse-vertical")
+      ) {
+        // 展開されている場合は display: block or height > 0
+        // 展開部分のulを探す
+        const ul = panel.querySelector("ul.MuiList-root");
+        if (ul) return ul;
+      }
+      panel = panel.nextElementSibling;
+    }
+    return null;
   }
 
-  // 「背景」タブと同じAccordion/リスト構成を作成
-  function createAddonTab() {
-    // 1. Accordionヘッダー部分
-    const headerDiv = document.createElement("div");
-    headerDiv.className = "MuiButtonBase-root MuiListItemButton-root MuiListItemButton-gutters";
-    headerDiv.setAttribute("role", "listitem");
-    headerDiv.setAttribute("tabindex", "0");
-    headerDiv.setAttribute("data-addon", "bgcolor-tabs");
-    headerDiv.style.display = "flex";
-    headerDiv.style.alignItems = "center";
-    headerDiv.style.width = "100%";
-    headerDiv.style.userSelect = "none";
-    headerDiv.style.minHeight = "48px";
-    headerDiv.style.padding = "6px 16px";
-    headerDiv.style.fontSize = "1rem";
-    headerDiv.style.color = "#fff";
-    headerDiv.style.background = "inherit";
-    headerDiv.style.border = "none";
-    headerDiv.style.textAlign = "left";
-    headerDiv.style.cursor = "pointer";
-    // Hover色
-    headerDiv.onmouseover = () => { headerDiv.style.background = "rgba(255,255,255,0.08)"; };
-    headerDiv.onmouseout = () => { headerDiv.style.background = "inherit"; };
+  // UIを追加する
+  function addAddonUI() {
+    removeExisting();
+    const ul = findBackgroundPanelUL();
+    if (!ul) return;
+
+    // 追加済みなら何もしない
+    if (ul.querySelector("[data-addon='bgcolor-tabs']")) return;
+
+    // <div role="listitem">で追加
+    const newDiv = document.createElement("div");
+    newDiv.className = "MuiButtonBase-root MuiListItemButton-root MuiListItemButton-gutters";
+    newDiv.setAttribute("role", "listitem");
+    newDiv.setAttribute("data-addon", "bgcolor-tabs");
+    newDiv.style.flexDirection = "column";
+    newDiv.style.alignItems = "stretch";
+    newDiv.style.paddingBottom = "0";
+    newDiv.style.position = "relative";
+    newDiv.style.background = "inherit";
+    newDiv.style.margin = "0";
+    newDiv.style.padding = "0";
+    newDiv.style.width = "100%";
+
+    // ヘッダー部分
+    const headerBtn = document.createElement("button");
+    headerBtn.type = "button";
+    headerBtn.className = "MuiButtonBase-root MuiListItemButton-root MuiListItemButton-gutters";
+    headerBtn.setAttribute("tabindex", "0");
+    headerBtn.setAttribute("role", "button");
+    headerBtn.style.width = "100%";
+    headerBtn.style.display = "flex";
+    headerBtn.style.alignItems = "center";
+    headerBtn.style.cursor = "pointer";
+    headerBtn.style.userSelect = "none";
+    headerBtn.style.minHeight = "48px";
+    headerBtn.style.padding = "6px 16px";
+    headerBtn.style.fontSize = "1rem";
+    headerBtn.style.color = "#fff";
+    headerBtn.style.background = "inherit";
+    headerBtn.style.border = "none";
+    headerBtn.style.textAlign = "left";
 
     // アイコン
     const iconDiv = document.createElement("div");
@@ -62,7 +109,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
         <circle cx="12" cy="12" r="9" fill="#888"/>
         <text x="12" y="17" text-anchor="middle" font-size="10" fill="#fff" font-family="sans-serif">色</text>
       </svg>`;
-    headerDiv.appendChild(iconDiv);
+    headerBtn.appendChild(iconDiv);
 
     // テキストラベル
     const textDiv = document.createElement("div");
@@ -71,7 +118,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     span.className = "MuiTypography-root MuiTypography-body1 MuiListItemText-primary";
     span.textContent = "背景色変更";
     textDiv.appendChild(span);
-    headerDiv.appendChild(textDiv);
+    headerBtn.appendChild(textDiv);
 
     // 展開/折りたたみアイコン
     const arrow = document.createElement("span");
@@ -81,27 +128,26 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
       </svg>
     `;
     arrow.style.marginLeft = "auto";
-    headerDiv.appendChild(arrow);
+    headerBtn.appendChild(arrow);
 
-    // 2. Accordionパネル部分 
-    const collapseDiv = document.createElement("div");
-    collapseDiv.className = "MuiCollapse-root MuiCollapse-vertical";
-    collapseDiv.setAttribute("data-addon-panel", "bgcolor-tabs");
-    collapseDiv.style.display = "none";
-    collapseDiv.style.overflow = "hidden";
-    collapseDiv.style.transition = "max-height 225ms cubic-bezier(0.4,0,0.2,1), opacity 225ms cubic-bezier(0.4,0,0.2,1)";
-    collapseDiv.style.maxHeight = "0";
-    collapseDiv.style.opacity = "0";
+    headerBtn.onmouseover = () => { headerBtn.style.background = "rgba(255,255,255,0.08)"; };
+    headerBtn.onmouseout = () => { headerBtn.style.background = "inherit"; };
 
-    // Accordion wrapper
-    const wrapper = document.createElement("div");
-    wrapper.className = "MuiCollapse-wrapper MuiCollapse-vertical";
-    collapseDiv.appendChild(wrapper);
+    newDiv.appendChild(headerBtn);
 
-    // Accordion wrapperInner
-    const wrapperInner = document.createElement("div");
-    wrapperInner.className = "MuiCollapse-wrapperInner MuiCollapse-vertical";
-    wrapper.appendChild(wrapperInner);
+    // 展開パネル本体（アニメーション対応）
+    const panelDiv = document.createElement("div");
+    panelDiv.style.maxHeight = "0";
+    panelDiv.style.opacity = "0";
+    panelDiv.style.overflow = "hidden";
+    panelDiv.style.transition = "max-height 225ms cubic-bezier(0.4,0,0.2,1), opacity 225ms cubic-bezier(0.4,0,0.2,1)";
+    panelDiv.style.flexDirection = "column";
+    panelDiv.style.background = "inherit";
+    panelDiv.style.margin = "0";
+    panelDiv.style.padding = "0 0 8px 0";
+    panelDiv.style.position = "relative";
+    panelDiv.style.zIndex = 1;
+    panelDiv.style.width = "100%";
 
     // タブバー
     const tabBar = document.createElement("div");
@@ -110,6 +156,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     tabBar.style.margin = "8px 0 0 32px";
     tabBar.style.overflowX = "auto";
     tabBar.className = "MuiTabs-root";
+
     // スクロールリスト
     const scrollDiv = document.createElement("div");
     scrollDiv.style.maxHeight = "120px";
@@ -117,12 +164,16 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
     scrollDiv.style.margin = "4px 0 0 32px";
     scrollDiv.style.paddingRight = "8px";
     scrollDiv.style.background = "inherit";
+
+    // 選択状態管理
     let selectedGroup = 0;
     let selectedColorIdx = {};
     groups.forEach((g, i) => selectedColorIdx[i] = 0);
+
     let pickerColor = {};
     groups.forEach((g,i)=> pickerColor[i] = "#cccccc");
 
+    // タブボタン生成
     groups.forEach((group, idx) => {
       const tabBtn = document.createElement("button");
       tabBtn.innerText = group.name;
@@ -151,6 +202,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
       };
       tabBar.appendChild(tabBtn);
     });
+    panelDiv.appendChild(tabBar);
 
     function renderColorList() {
       scrollDiv.innerHTML = '';
@@ -161,6 +213,7 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
         label.style.alignItems = "center";
         label.style.gap = "8px";
         label.style.margin = "4px 0";
+
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.checked = (selectedColorIdx[selectedGroup] === idx);
@@ -246,94 +299,50 @@ window.MyAppAddons.push(async function({ threeRenderer, addonBaseUrl }) {
       scrollDiv.appendChild(pickerLabel);
     }
     renderColorList();
+    panelDiv.appendChild(scrollDiv);
 
-    // panelDivの中身
-    wrapperInner.appendChild(tabBar);
-    wrapperInner.appendChild(scrollDiv);
-
-    // Accordion開閉状態
     let expanded = false;
     function setPanelDisplay(exp) {
       if (exp) {
-        collapseDiv.style.display = "block";
+        panelDiv.style.display = "flex";
         requestAnimationFrame(() => {
-          collapseDiv.style.maxHeight = "350px";
-          collapseDiv.style.opacity = "1";
+          panelDiv.style.maxHeight = "350px";
+          panelDiv.style.opacity = "1";
         });
       } else {
-        collapseDiv.style.maxHeight = "0";
-        collapseDiv.style.opacity = "0";
+        panelDiv.style.maxHeight = "0";
+        panelDiv.style.opacity = "0";
         setTimeout(() => {
-          if (collapseDiv.style.maxHeight === "0px" || collapseDiv.style.maxHeight === "0") collapseDiv.style.display = "none";
+          if (panelDiv.style.maxHeight === "0px" || panelDiv.style.maxHeight === "0") panelDiv.style.display = "none";
         }, 225);
       }
       arrow.firstElementChild.style.transform = exp ? "rotate(180deg)" : "";
       arrow.firstElementChild.style.transition = "transform 225ms cubic-bezier(0.4,0,0.2,1)";
     }
     setPanelDisplay(expanded);
-    headerDiv.onclick = () => {
+    headerBtn.onclick = () => {
       expanded = !expanded;
       setPanelDisplay(expanded);
     };
 
-    return { headerDiv, collapseDiv };
+    // パネルをAccordion展開部分のul内にappend
+    ul.appendChild(newDiv);
+    newDiv.appendChild(panelDiv);
   }
 
-  // 「環境設定」パネルulを監視して、常に正しい位置にUIを再挿入
-  function observeSettingsPanel() {
+  // 「背景」Accordionを監視して、開いたときのみUIを再挿入
+  function observeBackgroundAccordion() {
     const sidebar = document.querySelector("#root") || document.body;
-    function insertAddon() {
-      removeExisting();
-      const allUl = document.querySelectorAll("ul.MuiList-root");
-      let targetUl = null;
-      for (const ul of allUl) {
-        const labels = Array.from(ul.querySelectorAll("span")).map(s=>s.textContent);
-        if (
-          labels.some(l=>l && l.includes("背景")) &&
-          labels.some(l=>l && l.includes("UI表示"))
-        ) {
-          targetUl = ul;
-          break;
-        }
-      }
-      if (!targetUl) return;
-      if (targetUl.querySelector("[data-addon='bgcolor-tabs']")) return;
-
-      // 並び順を「背景」「背景色変更」「UI表示」としたい
-      const lis = Array.from(targetUl.children);
-      let backgroundIdx = -1, uiDisplayIdx = -1;
-      for (let i = 0; i < lis.length; i++) {
-        const span = lis[i].querySelector("span");
-        if (span && span.textContent.trim() === "背景") backgroundIdx = i;
-        if (span && span.textContent.trim() === "UI表示") uiDisplayIdx = i;
-      }
-      let insertIdx = (backgroundIdx !== -1) ? backgroundIdx + 1 : 0;
-      if (uiDisplayIdx !== -1 && insertIdx > uiDisplayIdx) {
-        insertIdx = uiDisplayIdx;
-      }
-
-      const { headerDiv, collapseDiv } = createAddonTab();
-
-      if (insertIdx >= 0 && insertIdx < targetUl.children.length) {
-        targetUl.insertBefore(headerDiv, targetUl.children[insertIdx]);
-        targetUl.insertBefore(collapseDiv, targetUl.children[insertIdx + 1]);
-      } else {
-        targetUl.appendChild(headerDiv);
-        targetUl.appendChild(collapseDiv);
-      }
-    }
-    setTimeout(insertAddon, 0);
-
-    // MutationObserverで監視
-    const observer = new MutationObserver(() => {
-      insertAddon();
+    let observer;
+    observer = new MutationObserver(() => {
+      addAddonUI();
     });
     observer.observe(sidebar, { childList: true, subtree: true });
+    setTimeout(addAddonUI, 0);
   }
-
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", observeSettingsPanel);
+    document.addEventListener("DOMContentLoaded", observeBackgroundAccordion);
   } else {
-    observeSettingsPanel();
+    observeBackgroundAccordion();
   }
 });
