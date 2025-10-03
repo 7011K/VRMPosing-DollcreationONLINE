@@ -2,6 +2,7 @@ window.MyAppAddons = window.MyAppAddons || [];
 
 window.MyAppAddons.push(function () {
   const ADDON_ID = "addon-bgcolor-tab";
+  const COLLAPSE_ID = "addon-bgcolor-collapse";
   const SETTINGS_BUTTON_SELECTOR = ".MuiIconButton-root.css-1egpgfe";
   const TAB_LABEL = "背景色変更";
 
@@ -20,12 +21,44 @@ window.MyAppAddons.push(function () {
     const labelSpan = cloned.querySelector('.MuiListItemText-primary');
     if (labelSpan) labelSpan.textContent = TAB_LABEL;
 
+    const expandIcon = cloned.querySelector('svg[data-testid]');
+    if (expandIcon) {
+      expandIcon.innerHTML = `<path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"></path>`; // 展開アイコン
+    }
+
     cloned.addEventListener("click", () => {
-      alert("背景色変更タブがクリックされました");
-      // ここに背景色変更処理を追加可能
+      const collapse = document.getElementById(COLLAPSE_ID);
+      if (collapse) {
+        collapse.remove(); // トグルで閉じる
+      } else {
+        insertCollapseContent(cloned);
+      }
     });
 
     return cloned;
+  }
+
+  function insertCollapseContent(afterElement) {
+    const collapse = document.createElement("div");
+    collapse.id = COLLAPSE_ID;
+    collapse.className = "MuiCollapse-root MuiCollapse-vertical";
+    collapse.style.transitionDuration = "237ms";
+
+    collapse.innerHTML = `
+      <div class="MuiCollapse-wrapper MuiCollapse-vertical">
+        <div class="MuiCollapse-wrapperInner MuiCollapse-vertical" style="padding: 8px 16px;">
+          <label style="display:block; margin-bottom:8px;">背景色を選択:</label>
+          <input type="color" id="bgcolor-picker" value="#ffffff" style="width:100%; height:40px;">
+        </div>
+      </div>
+    `;
+
+    const picker = collapse.querySelector("#bgcolor-picker");
+    picker.addEventListener("input", (e) => {
+      document.body.style.backgroundColor = e.target.value;
+    });
+
+    afterElement.parentNode.insertBefore(collapse, afterElement.nextSibling);
   }
 
   function insertAddonTab() {
@@ -40,8 +73,10 @@ window.MyAppAddons.push(function () {
   }
 
   function removeAddonTab() {
-    const existing = document.getElementById(ADDON_ID);
-    if (existing) existing.remove();
+    const tab = document.getElementById(ADDON_ID);
+    const collapse = document.getElementById(COLLAPSE_ID);
+    if (tab) tab.remove();
+    if (collapse) collapse.remove();
   }
 
   function adjustAddonPosition() {
@@ -60,7 +95,6 @@ window.MyAppAddons.push(function () {
     return settingsButton && settingsButton.getAttribute("aria-expanded") === "true";
   }
 
-  // DOM変化を監視して表示・非表示・位置調整
   const observer = new MutationObserver(() => {
     if (isSettingsPanelVisible()) {
       insertAddonTab();
