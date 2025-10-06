@@ -13,7 +13,7 @@ window.MyAppAddons.push(function registerBgColorAddon() {
   // JSONから色グループを読み込む
   async function loadGroupedColorsFromJSON() {
     try {
-      const response = await fetch("/colors.json");
+      const response = await fetch("colors.json");
       if (!response.ok) throw new Error("colors.json の取得に失敗");
       const data = await response.json();
       return Array.isArray(data.groups) ? data.groups : [];
@@ -94,3 +94,4 @@ window.MyAppAddons.push(function registerBgColorAddon() {
 
   console.log(`[DEBUG] ${TAB_LABEL} アドオンが登録されました`);
 });
+
