@@ -12,24 +12,35 @@
     <script type="module" crossorigin src="assets/index-5e29ee16.js"></script>
     <link rel="stylesheet" href="assets/mainindex.css">
     <link rel="manifest" href="manifest.webmanifest">
+    <style>
+      .addon-selector-button {
+        background-color: #eee;
+        border: 1px solid #ccc;
+        padding: 4px 6px;
+        font-size: 14px;
+        border-radius: 4px;
+        margin-right: 4px;
+        cursor: pointer;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script>
-      // myapp_tokenがなければIndex.htmlにリダイレクト
       if (!sessionStorage.getItem("myapp_token")) {
         window.location.href = "index.html";
       }
     </script>
     <script type="module">
-      // --- アドオン自動ローダ ---
-      // 「./addons/addons-list.json」から全*.jsを取得し、自動でimport
+      const loadedAddons = [];
+      const registeredAddonFns = [];
+      let addonVisible = false;
 
       async function discoverAddonJsFiles() {
         try {
           const resp = await fetch("./addons/addons-list.json");
           if (!resp.ok) throw new Error("アドオン一覧の取得に失敗しました");
-          return await resp.json(); // 例: ["addons/xxx/xxx.js", ...]
+          return await resp.json();
         } catch (e) {
           console.error("アドオン一覧取得エラー", e);
           return [];
@@ -46,6 +57,8 @@
               window.MyAppAddons.forEach(fn => {
                 try {
                   fn({ threeRenderer, mountPoint, addonBaseUrl: baseUrl });
+                  loadedAddons.push({ path: addonPath, baseUrl });
+                  registeredAddonFns.push(fn);
                 } catch (e) {
                   console.error(`[ADDON ERROR]`, addonPath, e);
                 }
@@ -55,20 +68,70 @@
             console.error(`Failed to load addon: ${addonPath}`, e);
           }
         }
+
+        window.addonHandle = () => {
+          const targetButton = document.querySelector(".main-action-button");
+          const root = document.getElementById("root");
+          if (!targetButton) {
+            console.warn("対象ボタン (.main-action-button) が見つかりません");
+            return;
+          }
+
+          if (!addonVisible) {
+            if (targetButton.dataset.addonIconsInjected) return;
+            targetButton.dataset.addonIconsInjected = "true";
+
+            loadedAddons.forEach((addon, index) => {
+              const icon = document.createElement("button");
+              icon.className = "addon-selector-button";
+              icon.title = `Addon ${index + 1}`;
+              icon.innerText = "★";
+              icon.dataset.addonIndex = index;
+
+              icon.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const fn = registeredAddonFns[index];
+                if (typeof fn === "function") {
+                  fn({
+                    threeRenderer: null,
+                    mountPoint: root,
+                    addonBaseUrl: addon.baseUrl
+                  });
+                }
+              });
+
+              targetButton.parentNode.insertBefore(icon, targetButton);
+            });
+
+            document.addEventListener("click", outsideClickHandler);
+            addonVisible = true;
+          } else {
+            hideAddonButtons();
+          }
+
+          function outsideClickHandler(e) {
+            const isAddonButton = e.target.classList.contains("addon-selector-button");
+            const isHandleButton = e.target === targetButton;
+            if (!isAddonButton && !isHandleButton) {
+              hideAddonButtons();
+            }
+          }
+
+          function hideAddonButtons() {
+            const icons = document.querySelectorAll(".addon-selector-button");
+            icons.forEach(btn => btn.remove());
+            targetButton.dataset.addonIconsInjected = "";
+            document.removeEventListener("click", outsideClickHandler);
+            addonVisible = false;
+          }
+        };
       }
 
       window.addEventListener("DOMContentLoaded", () => {
-        // Three.js renderer取得方法をdQクラス構成に合わせて取得
-        const threeRenderer =
-          (window.UQ && window.UQ._viewer && window.UQ._viewer.renderer)
-          || null;
-
         const canvas = document.querySelector("canvas");
         const mountPoint = canvas ? canvas.parentNode : document.getElementById("root");
-        console.log("Three.js renderer:", threeRenderer);
-        loadAndInitAddons({ threeRenderer, mountPoint });
+        loadAndInitAddons({ threeRenderer: null, mountPoint });
       });
     </script>
   </body>
 </html>
-
