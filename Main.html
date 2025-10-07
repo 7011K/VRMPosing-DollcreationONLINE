@@ -72,35 +72,56 @@
         window.addonHandle = () => {
           const targetButton = document.querySelector('.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.css-1egpgfe');
           const root = document.getElementById("root");
+          // デバッグ: ボタンとフラグの状態を出力
+          console.log("window.addonHandle 実行");
+          console.log("targetButton:", targetButton);
+          console.log("addonIconsInjected:", targetButton?.dataset.addonIconsInjected);
+          console.log("loadedAddons:", loadedAddons);
+          console.log("registeredAddonFns:", registeredAddonFns);
+
           if (!targetButton) {
             console.warn("対象ボタン (.main-action-button) が見つかりません");
             return;
           }
 
           if (!addonVisible) {
-            if (targetButton.dataset.addonIconsInjected) return;
+            if (targetButton.dataset.addonIconsInjected) {
+              console.log("★ボタンは既に表示済み（addonIconsInjected=true）");
+              return;
+            }
             targetButton.dataset.addonIconsInjected = "true";
 
             loadedAddons.forEach((addon, index) => {
-              const icon = document.createElement("button");
-              icon.className = "addon-selector-button";
-              icon.title = `Addon ${index + 1}`;
-              icon.innerText = "★";
-              icon.dataset.addonIndex = index;
+              try {
+                console.log("★ボタン生成開始", addon, index);
+                const icon = document.createElement("button");
+                icon.className = "addon-selector-button";
+                icon.title = `Addon ${index + 1}`;
+                icon.innerText = "★";
+                icon.dataset.addonIndex = index;
 
-              icon.addEventListener("click", (e) => {
-                e.stopPropagation();
-                const fn = registeredAddonFns[index];
-                if (typeof fn === "function") {
-                  fn({
-                    threeRenderer: null,
-                    mountPoint: root,
-                    addonBaseUrl: addon.baseUrl
-                  });
+                icon.addEventListener("click", (e) => {
+                  e.stopPropagation();
+                  const fn = registeredAddonFns[index];
+                  if (typeof fn === "function") {
+                    fn({
+                      threeRenderer: null,
+                      mountPoint: root,
+                      addonBaseUrl: addon.baseUrl
+                    });
+                  }
+                });
+
+                if (!targetButton.parentNode) {
+                  console.error("targetButton.parentNode が null です。ボタンを挿入できません", targetButton);
+                  return;
                 }
-              });
 
-              targetButton.parentNode.insertBefore(icon, targetButton);
+                console.log("★ボタンを insertBefore します", targetButton.parentNode, targetButton, icon);
+                targetButton.parentNode.insertBefore(icon, targetButton);
+              } catch (err) {
+                console.error("★ボタン生成中にエラー", err);
+              }
             });
 
             document.addEventListener("click", outsideClickHandler);
