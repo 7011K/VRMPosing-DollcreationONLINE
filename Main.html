@@ -70,17 +70,24 @@
         }
 
         window.addonHandle = () => {
-          const targetButton = document.querySelector('.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.css-1egpgfe');
+          // 全ての該当ボタンを取得
+          const buttons = document.querySelectorAll('.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.css-1egpgfe');
+          let targetButton = null;
+
+          // aria-label="アドオン"のボタンだけをターゲットに
+          buttons.forEach(btn => {
+            if (btn.getAttribute('aria-label') === 'アドオン') {
+              targetButton = btn;
+            }
+          });
+
           const root = document.getElementById("root");
-          // デバッグ: ボタンとフラグの状態を出力
           console.log("window.addonHandle 実行");
           console.log("targetButton:", targetButton);
           console.log("addonIconsInjected:", targetButton?.dataset.addonIconsInjected);
-          console.log("loadedAddons:", loadedAddons);
-          console.log("registeredAddonFns:", registeredAddonFns);
 
           if (!targetButton) {
-            console.warn("対象ボタン (.main-action-button) が見つかりません");
+            console.warn('aria-label="アドオン" のボタンが見つかりません');
             return;
           }
 
