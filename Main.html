@@ -1,64 +1,142 @@
-async function loadAndInitAddons({ threeRenderer, mountPoint }) {
-  // ...（略）アドオンJSのimportと登録...
-
-  window.addonHandle = () => {
-    const targetButton = document.querySelector('.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.css-1egpgfe');
-    const root = document.getElementById("root");
-    if (!targetButton) {
-      console.warn("対象ボタン (.main-action-button) が見つかりません");
-      return;
-    }
-
-    if (!addonVisible) {
-      if (targetButton.dataset.addonIconsInjected) return;
-      targetButton.dataset.addonIconsInjected = "true";
-
-      loadedAddons.forEach((addon, index) => {
-        const icon = document.createElement("button");
-        icon.className = "addon-selector-button";
-        icon.title = `Addon ${index + 1}`;
-        icon.innerText = "★";
-        icon.dataset.addonIndex = index;
-
-        icon.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const fn = registeredAddonFns[index];
-          if (typeof fn === "function") {
-            fn({
-              threeRenderer: null,
-              mountPoint: root,
-              addonBaseUrl: addon.baseUrl
-            });
-          }
-        });
-
-        targetButton.parentNode.insertBefore(icon, targetButton);
-      });
-
-      document.addEventListener("click", outsideClickHandler);
-      addonVisible = true;
-    } else {
-      hideAddonButtons();
-    }
-
-    function outsideClickHandler(e) {
-      const isAddonButton = e.target.classList.contains("addon-selector-button");
-      const isHandleButton = e.target === targetButton;
-      if (!isAddonButton && !isHandleButton) {
-        hideAddonButtons();
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VRMPosing+DollcreationONLINE</title>
+    <meta
+      name="description"
+      content="VRMPosing+DollcreationONLINEはブラウザ上でVRMアバターのポーズ編集や、背景透過画像の撮影やポーズさせたVRMファイルのフィギュア化がお手軽に出来るWebアプリケーションです。"
+    />
+    <script type="module" crossorigin src="assets/index-5e29ee16.js"></script>
+    <link rel="stylesheet" href="assets/mainindex.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <style>
+      .addon-selector-button {
+        background-color: #eee;
+        border: 1px solid #ccc;
+        padding: 4px 6px;
+        font-size: 14px;
+        border-radius: 4px;
+        margin-right: 4px;
+        cursor: pointer;
       }
-    }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      if (!sessionStorage.getItem("myapp_token")) {
+        window.location.href = "index.html";
+      }
+    </script>
+    <script type="module">
+      const loadedAddons = [];
+      const registeredAddonFns = [];
+      let addonVisible = false;
 
-    function hideAddonButtons() {
-      const icons = document.querySelectorAll(".addon-selector-button");
-      icons.forEach(btn => btn.remove());
-      targetButton.dataset.addonIconsInjected = "";
-      document.removeEventListener("click", outsideClickHandler);
-      addonVisible = false;
-    }
-  };
+      async function discoverAddonJsFiles() {
+        try {
+          const resp = await fetch("./addons/addons-list.json");
+          if (!resp.ok) throw new Error("アドオン一覧の取得に失敗しました");
+          return await resp.json();
+        } catch (e) {
+          console.error("アドオン一覧取得エラー", e);
+          return [];
+        }
+      }
 
-  // ここに追加！
-  window._loadedAddons = loadedAddons;
-  window._registeredAddonFns = registeredAddonFns;
-}
+      async function loadAndInitAddons({ threeRenderer, mountPoint }) {
+        const addonFiles = await discoverAddonJsFiles();
+        for (const addonPath of addonFiles) {
+          const baseUrl = addonPath.substring(0, addonPath.lastIndexOf('/') + 1);
+          try {
+            await import(`./${addonPath}`);
+            if (window.MyAppAddons) {
+              window.MyAppAddons.forEach(fn => {
+                try {
+                  fn({ threeRenderer, mountPoint, addonBaseUrl: baseUrl });
+                  loadedAddons.push({ path: addonPath, baseUrl });
+                  registeredAddonFns.push(fn);
+                } catch (e) {
+                  console.error(`[ADDON ERROR]`, addonPath, e);
+                }
+              });
+            }
+          } catch (e) {
+            console.error(`Failed to load addon: ${addonPath}`, e);
+          }
+        }
+
+        window.addonHandle = () => {
+          const targetButton = document.querySelector('.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.css-1egpgfe');
+          const root = document.getElementById("root");
+          if (!targetButton) {
+            console.warn("対象ボタン (.main-action-button) が見つかりません");
+            return;
+          }
+
+          if (!addonVisible) {
+            if (targetButton.dataset.addonIconsInjected) return;
+            targetButton.dataset.addonIconsInjected = "true";
+
+            loadedAddons.forEach((addon, index) => {
+              const icon = document.createElement("button");
+              icon.className = "addon-selector-button";
+              icon.title = `Addon ${index + 1}`;
+              icon.innerText = "★";
+              icon.dataset.addonIndex = index;
+
+              icon.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const fn = registeredAddonFns[index];
+                if (typeof fn === "function") {
+                  fn({
+                    threeRenderer: null,
+                    mountPoint: root,
+                    addonBaseUrl: addon.baseUrl
+                  });
+                }
+              });
+
+              targetButton.parentNode.insertBefore(icon, targetButton);
+            });
+
+            document.addEventListener("click", outsideClickHandler);
+            addonVisible = true;
+          } else {
+            hideAddonButtons();
+          }
+
+          function outsideClickHandler(e) {
+            const isAddonButton = e.target.classList.contains("addon-selector-button");
+            const isHandleButton = e.target === targetButton;
+            if (!isAddonButton && !isHandleButton) {
+              hideAddonButtons();
+            }
+          }
+
+          function hideAddonButtons() {
+            const icons = document.querySelectorAll(".addon-selector-button");
+            icons.forEach(btn => btn.remove());
+            targetButton.dataset.addonIconsInjected = "";
+            document.removeEventListener("click", outsideClickHandler);
+            addonVisible = false;
+          }
+        };
+
+        // ---- グローバルで確認できるようにする ----
+        window._loadedAddons = loadedAddons;
+        window._registeredAddonFns = registeredAddonFns;
+        // -----------------------------------------
+      }
+
+      window.addEventListener("DOMContentLoaded", () => {
+        const canvas = document.querySelector("canvas");
+        const mountPoint = canvas ? canvas.parentNode : document.getElementById("root");
+        loadAndInitAddons({ threeRenderer: null, mountPoint });
+      });
+    </script>
+  </body>
+</html>
