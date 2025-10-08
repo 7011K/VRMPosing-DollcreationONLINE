@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VRMPosing+DollcreationONLINE</title>
+    <meta
+      name="description"
+      content="VRMPosing+DollcreationONLINEはブラウザ上でVRMアバターのポーズ編集や、背景透過画像の撮影やポーズさせたVRMファイルのフィギュア化がお手軽に出来るWebアプリケーションです。"
+    />
+    <script type="module" crossorigin src="assets/index-5e29ee16.js"></script>
+    <link rel="stylesheet" href="assets/mainindex.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <style>
+      .addon-selector-button-absolute {
+        position: absolute;
+        background-color: #eee;
+        border: 1px solid #ccc;
+        padding: 4px 6px;
+        font-size: 14px;
+        border-radius: 4px;
+        margin-right: 4px;
+        cursor: pointer;
+        z-index: 9999;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      if (!sessionStorage.getItem("myapp_token")) {
+        window.location.href = "index.html";
+      }
+    </script>
+    <script type="module">
+      const loadedAddons = [];
+      const registeredAddonFns = [];
+
+      async function discoverAddonJsFiles() {
+        try {
+          const resp = await fetch("./addons/addons-list.json");
+          if (!resp.ok) throw new Error("アドオン一覧の取得に失敗しました");
+          return await resp.json();
+        } catch (e) {
+          console.error("アドオン一覧取得エラー", e);
+          return [];
+        }
+      }
+
+      // ★ボタン群をbody直下に絶対配置で表示
+      function showAbsoluteAddonButtons(targetButton) {
+        // 一度消す
+        hideAbsoluteAddonButtons();
+
+        if (!targetButton) return;
+        const rect = targetButton.getBoundingClientRect();
+        const BUTTON_SIZE = 32; // ボタン高さ(px)
+        const BUTTON_MARGIN = 6; // ボタン間隔(px)
+
+        // 配置座標計算: アドオンボタンの左側（横並び）
+        let left = rect.left - (loadedAddons.length * (BUTTON_SIZE + BUTTON_MARGIN));
+        let top = rect.top;
+
+        loadedAddons.forEach((addon, index) => {
+          const icon = document.createElement("button");
+          icon.className = "addon-selector-button-absolute";
+          icon.title = `Addon ${index + 1}`;
+          icon.innerText = "★";
+          icon.dataset.addonIndex = index;
+
+          // 位置計算（左から右へ並べる場合は rect.left + ... に変更）
+          icon.style.left = left + index * (BUTTON_SIZE + BUTTON_MARGIN) + "px";
+          icon.style.top = (top) + "px";
+          icon.style.height = BUTTON_SIZE + "px";
+          icon.style.width = BUTTON_SIZE + "px";
+
+          icon.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const fn = registeredAddonFns[index];
+            if (typeof fn === "function") {
+              fn({
+                threeRenderer: null,
+                mountPoint: document.getElementById("root"),
+                addonBaseUrl: addon.baseUrl
+              });
+            }
+          });
+
+          icon.setAttribute("data-addon-absolute", "true");
+          document.body.appendChild(icon);
+        });
+
+        // イベント: レイアウト変化で消す（resize/scroll/クリック）
+        window.addEventListener("resize", hideAbsoluteAddonButtons, { once: true });
+        window.addEventListener("scroll", hideAbsoluteAddonButtons, { once: true });
+        document.addEventListener("click", hideAbsoluteAddonButtons, { once: true });
+      }
+
+      function hideAbsoluteAddonButtons() {
+        document.querySelectorAll('.addon-selector-button-absolute').forEach(btn => btn.remove());
+        window.removeEventListener("resize", hideAbsoluteAddonButtons, { once: true });
+        window.removeEventListener("scroll", hideAbsoluteAddonButtons, { once: true });
+        document.removeEventListener("click", hideAbsoluteAddonButtons, { once: true });
+      }
+
+      async function loadAndInitAddons({ threeRenderer, mountPoint }) {
+        const addonFiles = await discoverAddonJsFiles();
+        for (const addonPath of addonFiles) {
+          const baseUrl = addonPath.substring(0, addonPath.lastIndexOf('/') + 1);
+          try {
+            await import(`./${addonPath}`);
+            if (window.MyAppAddons) {
+              window.MyAppAddons.forEach(fn => {
+                try {
+                  fn({ threeRenderer, mountPoint, addonBaseUrl: baseUrl });
+                  loadedAddons.push({ path: addonPath, baseUrl });
+                  registeredAddonFns.push(fn);
+                } catch (e) {
+                  console.error(`[ADDON ERROR]`, addonPath, e);
+                }
+              });
+            }
+          } catch (e) {
+            console.error(`Failed to load addon: ${addonPath}`, e);
+          }
+        }
+
+        // --- アドオンボタンの位置取得＆絶対配置表示 ---
+        window.addonHandle = () => {
+          // 全ての該当ボタンを取得
+          const buttons = document.querySelectorAll('.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium.css-1egpgfe');
+          let targetButton = null;
+
+          // aria-label="アドオン"のボタンだけをターゲットに
+          buttons.forEach(btn => {
+            if (btn.getAttribute('aria-label') === 'アドオン') {
+              targetButton = btn;
+            }
+          });
+
+          if (!targetButton) {
+            console.warn('aria-label="アドオン" のボタンが見つかりません');
+            return;
+          }
+
+          showAbsoluteAddonButtons(targetButton);
+        };
+
+        window._loadedAddons = loadedAddons;
+        window._registeredAddonFns = registeredAddonFns;
+      }
+
+      window.addEventListener("DOMContentLoaded", () => {
+        const canvas = document.querySelector("canvas");
+        const mountPoint = canvas ? canvas.parentNode : document.getElementById("root");
+        loadAndInitAddons({ threeRenderer: null, mountPoint });
+      });
+    </script>
+  </body>
+</html>
