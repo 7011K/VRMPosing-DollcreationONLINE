@@ -9,8 +9,8 @@ window.MyAppAddons.push(function({ threeRenderer, mountPoint, addonBaseUrl }) {
   }
   async function loadGroupedColorsFromJSON() {
     try {
-      const response = await fetch(addonBaseUrl + "colors.json");
-      if (!response.ok) throw new Error("colors.json の取得に失敗");
+      const response = await fetch(addonBaseUrl + "bgcolor-presets.json");
+      if (!response.ok) throw new Error("bgcolor-presets.json の取得に失敗");
       const data = await response.json();
       return Array.isArray(data.groups) ? data.groups : [];
     } catch (error) {
@@ -68,3 +68,4 @@ window.MyAppAddons.push(function({ threeRenderer, mountPoint, addonBaseUrl }) {
   }
   showAddonInterface();
 });
+
